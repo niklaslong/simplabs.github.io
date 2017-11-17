@@ -121,12 +121,24 @@ ul {
 blockquote {
   border: none;
   width: 83.33333333%;
-  margin: 0 auto;
+  margin: 20px auto;
   padding: 0;
 
   &:before {
     display: block;
     content: "\201d";
+  }
+}
+
+table {
+  margin: 30px auto;
+
+  tbody {
+    border-top: thin solid $primary-text-color;
+  }
+
+  td, th {
+    padding: 0 10px;
   }
 }
 
