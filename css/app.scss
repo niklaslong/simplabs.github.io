@@ -121,24 +121,12 @@ ul {
 blockquote {
   border: none;
   width: 83.33333333%;
-  margin: 20px auto;
+  margin: 0 auto;
   padding: 0;
 
   &:before {
     display: block;
     content: "\201d";
-  }
-}
-
-table {
-  margin: 30px auto;
-
-  tbody {
-    border-top: thin solid $primary-text-color;
-  }
-
-  td, th {
-    padding: 0 10px;
   }
 }
 
@@ -385,6 +373,31 @@ pre.highlight {
 
   .article-meta {
     margin: 0 0 20px 0;
+  }
+
+  blockquote {
+    margin-top: 40px;
+    margin-bottom: 20px;
+  }
+
+  table {
+    margin: 0 auto 20px auto;
+
+    thead {
+      border-bottom-width: 2px;
+      border-bottom-style: solid;
+    }
+
+    tbody {
+      tr {
+        border-bottom-width: 1px;
+        border-bottom-style: solid;
+      }
+    }
+
+    td, th {
+      padding: 5px 10px;
+    }
   }
 }
 
