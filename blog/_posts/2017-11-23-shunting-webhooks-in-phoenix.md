@@ -55,10 +55,10 @@ What if we could interfere with the incoming connection before it hits the route
 The router would look something like this:
 
 ```ruby
-post "webhook/add"
-post "webhook/subtract"
-post "webhook/multiply"
-post "webhook/divide"
+post("webhook/add")
+post("webhook/subtract")
+post("webhook/multiply")
+post("webhook/divide")
 ```
 
 And the controller:
@@ -74,9 +74,9 @@ In this case, each controller action performs a specific function, the router ma
 
 ```ruby
 defmodule MyApp.Endpoint do
-  #...
-  plug MyApp.WebhookShunt
-  plug MyApp.Router
+  # ...
+  plug(MyApp.WebhookShunt)
+  plug(MyApp.Router)
 end
 ```
 
@@ -107,7 +107,7 @@ defmodule MyAppWeb.Plug.WebhookShunt do
 
   def init(default), do: default
 
-  def call(%Conn{params: %{"event" => "addition"} = conn, _default) do
+  def call(%Conn{params: %{"event" => "addition"}} = conn, _default) do
     conn
     |> change_path_info(["webhook", "add"])
   end
@@ -141,7 +141,7 @@ Let's setup our Webhook path in `router.ex`:
 
 ```ruby
 scope "/", MyApp do
-  forward "/webhook", Plugs.WebhookShunt
+  forward("/webhook", Plugs.WebhookShunt)
 end
 ```
 
@@ -156,13 +156,13 @@ defmodule MyAppWeb.Plugs.WebhookShunt do
 
   def init(default), do: default
 
-  def call(%Conn{params: %{"event" => "addition"} = conn, _default) do
+  def call(%Conn{params: %{"event" => "addition"}} = conn, _default) do
     conn
     |> change_path_info(["webhook", "add"])
     |> WebhookRouter.call(opts)
   end
 
-  def call(%Conn{params: %{"event" => "subtraction"} = conn, _default) do
+  def call(%Conn{params: %{"event" => "subtraction"}} = conn, _default) do
     conn
     |> change_path_info(["webhook", "subtract"])
     |> WebhookRouter.call(opts)
@@ -179,8 +179,8 @@ defmodule MyAppWeb.WebhookRouter do
   use MyAppWeb, :router
 
   scope "/webhook", MyAppWeb do
-    post "/add", WebhookController, :add
-    post "/subtract", WebhookController, :subtract
+    post("/add", WebhookController, :add)
+    post("/subtract", WebhookController, :subtract)
   end
 end
 ```
