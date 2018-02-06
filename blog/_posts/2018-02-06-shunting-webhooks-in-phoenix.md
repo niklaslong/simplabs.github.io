@@ -4,6 +4,7 @@ section: Blog
 title: Handling Webhooks in Phoenix
 author: "Niklas Long"
 github-handle: niklaslong
+twitter-handle: niklas_long
 ---
 
 I recently had to implement a controller which took care of receiving and processing webhooks. The thing is, the API could send many different payloads to the webhook callback and there was only one tired and bloated controller action responsible for welcoming them. This didn't really seem to fit with the concept of using routes to identify controller actions. So I set out to find a better solution.
@@ -50,10 +51,12 @@ What if we could interfere with the incoming connection before it hits the route
 The router would look something like this:
 
 ```ruby
-post("webhook/add")
-post("webhook/subtract")
-post("webhook/multiply")
-post("webhook/divide")
+scope "/webhook", MyAppWeb do
+  post("/add", WebhookController, :add)
+  post("/subtract", WebhookController, :subtract)
+  post("/multiply", WebhookController, :multiply)
+  post("/divide", WebhookController, :divide)
+end
 ```
 
 And the controller:
@@ -87,14 +90,13 @@ defmodule MyAppWeb.Plug.WebhookShunt do
 
   def init(opts), do: opts
 
-  def call(conn, opts) do
-  end
+  def call(conn, _opts) do: conn
 end
 ```
 
 The core components of a Phoenix appplication are plugs. This includes endpoints, routers and controllers. There are two flavors of `Plug`, function plugs and module plugs. We'll be using the latter in this example, but I highly suggest checking out the [docs](https://hexdocs.pm/plug/readme.html).
 
-Let's examine the code above, you'll notice there a two functions already defined:
+Let's examine the code above, you'll notice there are two functions already defined:
 * `init/1` which initializes any arguments or options to be passed to `call/2` (executed at compile time)
 * `call/2` which transforms the connection (it's actually a simple function plug and is executed at run time)
 
@@ -117,7 +119,7 @@ defmodule MyAppWeb.Plug.WebhookShunt do
 end
 ```
 
-`change_path_info/2` changes the `path_info` property on the `conn`, in this case to `post "webhook/add"`. You'll notice I also added a no-op function clause for `call/1`. If other routes are added and don't need to be manipulated in the same way as the ones above, we need to make sure the request gets through to the router unmodified.
+`change_path_info/2` changes the `path_info` property on the `conn`, in this case to `post "webhook/add"`. You'll notice I also added a no-op function clause for `call/2`. If other routes are added and don't need to be manipulated in the same way as the ones above, we need to make sure the request gets through to the router unmodified.
 
 This solution isn't great however. We are placing code in the endpoint, which will be executed no matter what the request path is. This isn't ideal, and may cause issues down the line.
 
@@ -146,7 +148,7 @@ end
 
 As long as your external APIs makes a request to this path when you do the setup for the webhook callbacks, every incoming request to this path will be forwarded to the WebhookShunt.
 
-Let's also add a second `call/1` clauses to handle the `subtraction` event in the WebhookShunt:
+Let's also add a second `call/2` clauses to handle the `subtraction` event in the WebhookShunt:
 
 ```ruby
 defmodule MyAppWeb.Plugs.WebhookShunt do
@@ -171,7 +173,7 @@ defmodule MyAppWeb.Plugs.WebhookShunt do
 end
 ```
 
-You'll notice I've remove the no-op `call/1` function clause. This is because we no longer have to handle all potential requests like we did in the endpoint; we can focuse entirely on the hooks. Now, when we receive a webhook which doesn't match a clause of `call/1`, Phoenix will raise an error.
+You'll notice I've removed the no-op `call/2` function clause. This is because we no longer have to handle all potential requests like we did in the endpoint; we can focuse entirely on the hooks. Now, if we receive a webhook which doesn't match a clause of `call/2`, Phoenix will raise an error.
 
 Note: if you can't configure your API to send only the webhooks you're interested in handling, you should implement some code to handle that.
 
@@ -194,5 +196,7 @@ The router is called from the WebhookShunt with `WebhookRouter.call(opts)`, and 
 def add(params), do: #handle addition event
 def subtract(params), do: #handle subtraction event
 ```
+
+I left out `multiply` and `divide` for brevity, as the the code is identical other than naming.
 
 So there you have it, handling webhooks in Phoenix.
