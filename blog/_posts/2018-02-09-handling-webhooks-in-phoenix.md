@@ -119,7 +119,7 @@ defmodule MyAppWeb.Plug.WebhookShunt do
 end
 ```
 
-`change_path_info/2` changes the `path_info` property on the `conn`, in this case to `post "webhook/add"`. You'll notice I also added a no-op function clause for `call/2`. If other routes are added and don't need to be manipulated in the same way as the ones above, we need to make sure the request gets through to the router unmodified.
+`change_path_info/2` changes the `path_info` property on the `conn`, in this case to `"webhook/add"`. You'll notice I also added a no-op function clause for `call/2`. If other routes are added and don't need to be manipulated in the same way as the ones above, we need to make sure the request gets through to the router unmodified.
 
 This solution isn't great however. We are placing code in the endpoint, which will be executed no matter what the request path is. This isn't ideal, and may cause issues down the line.
 
@@ -141,7 +141,7 @@ I think this approach is better; we don't need to modify the endpoint, the route
 Let's setup our webhook path in `router.ex`:
 
 ```ruby
-scope "/", MyApp do
+scope "/", MyAppWeb do
   forward("/webhook", Plugs.WebhookShunt)
 end
 ```
