@@ -6,7 +6,7 @@ author: "Niklas Long"
 github-handle: niklaslong
 ---
 
-I recently had to implement a controller which took care of receiving and processing Webhooks. The thing is, the API could send many different payloads to the webhook callback and there was only one tired and bloated controller action responsible for welcoming them. This didn't really seem to fit with the concept of using routes to identify controller actions. So I set out to find a better solution.
+I recently had to implement a controller which took care of receiving and processing webhooks. The thing is, the API could send many different payloads to the webhook callback and there was only one tired and bloated controller action responsible for welcoming them. This didn't really seem to fit with the concept of using routes to identify controller actions. So I set out to find a better solution.
 
 <!--break-->
 
@@ -67,7 +67,7 @@ def divide(params), do: #handle division
 
 In this case, each controller action performs a specific function, the router maps each incoming request to these actions and the code is easily maintainable, well-structured and won't become jumbled over time. To achieve this however, we need to change a couple of things.
 
-First off, we need to interfere with the incoming `conn` before it hits the router so it will match our new routes. This is because the webhook callback url is usually always the same and doesn't depend on what event triggered it e.g., `"myapp.com/webhook"`. You would think we could create a plug for this and simply add it to a custom pipeline for the routes. The problem with this, is the router will invoke the pipeline after it matches a route. Therefore, we cannot modify the `conn`'s path in this pipeline and expect it to match our `add`, `subtract`, `multiply` or `divide` routes. If we want our new routes to match, we need to intercept the `conn` in a plug called in the endpoint. The endpoint handles starting the web server and transforming requests through several defined plugs before calling the Router.
+First off, we need to interfere with the incoming `conn` before it hits the router so it will match our new routes. This is because the webhook callback url is usually always the same and doesn't depend on what event triggered it e.g., `"myapp.com/webhook"`. You would think we could create a plug for this and simply add it to a custom pipeline for the routes. The problem with this, is the router will invoke the pipeline after it matches a route. Therefore, we cannot modify the `conn`'s path in this pipeline and expect it to match our `add`, `subtract`, `multiply` or `divide` routes. If we want our new routes to match, we need to intercept the `conn` in a plug called in the endpoint. The endpoint handles starting the web server and transforming requests through several defined plugs before calling the router.
 
 Let's add a plug called `MyApp.WebhookShunt` to the endpoint, just before the router.
 
@@ -92,7 +92,7 @@ defmodule MyAppWeb.Plug.WebhookShunt do
 end
 ```
 
-The core components of a Phoenix appplication are plugs. This includes Endpoints, Routers and Controllers. There are two flavors of `Plug`, function plugs and module plugs. We'll be using the latter in this example, but I highly suggest checking out the [docs](https://hexdocs.pm/plug/readme.html).
+The core components of a Phoenix appplication are plugs. This includes endpoints, routers and controllers. There are two flavors of `Plug`, function plugs and module plugs. We'll be using the latter in this example, but I highly suggest checking out the [docs](https://hexdocs.pm/plug/readme.html).
 
 Let's examine the code above, you'll notice there a two functions already defined:
 * `init/1` which initializes any arguments or options to be passed to `call/2` (executed at compile time)
@@ -125,7 +125,7 @@ This solution isn't great however. We are placing code in the endpoint, which wi
 
 Instead of intercepting the `conn` in the endpoint, we could forward it from the application's main router to the `WebhookShunt`, modify it and call a second router who's sole purpose would be to handle the hooks.
 
-1. The request hits Router which has one path for all webhooks (`"/webhook"`)
+1. The request hits router which has one path for all webhooks (`"/webhook"`)
 2. `conn` is forwarded to the WebhookShunt which modifies the path based on the request payload
 3. The WebhookShunt calls the WebhookRouter, passing it the modified `conn`
 4. The WebhookRouter matches the `conn` path and calls the appropriate action on the WebhookController
@@ -170,6 +170,10 @@ defmodule MyAppWeb.Plugs.WebhookShunt do
   def change_path_info(conn, new_path), do: put_in(conn.path_info, new_path)
 end
 ```
+
+You'll notice I've remove the no-op `call/1` function clause. This is because we no longer have to handle all potential requests like we did in the endpoint; we can focuse entirely on the hooks. Now, when we receive a webhook which doesn't match a clause of `call/1`, Phoenix will raise an error.
+
+Note: if you can't configure your API to send only the webhooks you're interested in handling, you should implement some code to handle that.
 
 Let's also create `webhook_router.ex` in the `_web` directory:
 
