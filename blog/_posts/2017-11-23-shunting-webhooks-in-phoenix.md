@@ -6,7 +6,7 @@ author: "Niklas Long"
 github-handle: niklaslong
 ---
 
-I recently had to implement a controller which took care of receiving and processing Webhooks. The thing is, the API could send many different payloads to the webhook callback and there was only one tired and bloated controller action responsible for welcoming them. This didn't really seem to fit with the concept of using routes to identify controller actions. So I set out to find a more pleasing solution; now that I've found one, I'm here to share.
+I recently had to implement a controller which took care of receiving and processing Webhooks. The thing is, the API could send many different payloads to the webhook callback and there was only one tired and bloated controller action responsible for welcoming them. This didn't really seem to fit with the concept of using routes to identify controller actions. So I set out to find a better solution.
 
 <!--break-->
 
@@ -18,14 +18,10 @@ Use `forward` on `MyApp.router` to forward `conn` to a custom plug which transfo
 
 Let's restate the problem:
 * one controller action
-* many different possible Webhook payloads
+* many different possible webhook payloads
 * different computation required depending on payload
 
-Which results in:
-* one bloated controller action to handle all the different cases
-* routing isn't a good representation of what is actually going on
-
-I actually came up with three different ways of solving this problem; only the last did so to my satsifaction. I will, however, go through all three approaches, as they proved themselves equally enlightening as learning opportunities.
+I actually came up with three different ways of solving this problem; only the last was to my satsifaction. I will, however, go through all three approaches, as they proved interesting learning opportunities.
 
 1. multiple function clauses for controller action
 2. plug called from endpoint
@@ -37,7 +33,6 @@ This is the simplest way to run specific code based on the request payload that 
 Let's say we're receiving webhooks which contain an `event` key. It describes the event which triggered the webhook and we can use it to determine what code we are going to run.
 
 Here's our controller with the multiple clauses:
-
 
 ```ruby
 def hook(%{event: "addition"} = params), do: add(params)
@@ -70,7 +65,7 @@ def multiply(params), do: #handle multiplication event
 def divide(params), do: #handle division
 ```
 
-In this case, each controller action performs a specific function, the router maps each incoming request to these actions and the code is easily maintainable, well structured and won't become jumbled over time. To achieve this however, we need to change a couple of things. First off, we need to interfere with the incoming `conn` before it hits the router so it will match our new aforementioned routes. This is because the Webhook callback url is usually always the same and doesn't depend on what event triggered it e.g., `"myapp.com/webhook"`. You would think we could create a plug for this and simply add it to a custom pipeline for the aforementioned routes. The problem with this is the router will invoke the pipeline after it matches a route. Therefore we cannot modify the `conn`'s path in this pipeline and expect it to match our `add`, `subtract`, `multiply` or `divide` routes. If we want our new routes to match, we need to intercept the `conn` in a plug called in the endpoint. The endpoint handles starting the web server and transforming requests through several defined plugs before calling the Router. Let's add a plug called `MyApp.WebhookShunt` to the endpoint, just before the router.
+In this case, each controller action performs a specific function, the router maps each incoming request to these actions and the code is easily maintainable, well-structured and won't become jumbled over time. To achieve this however, we need to change a couple of things. First off, we need to interfere with the incoming `conn` before it hits the router so it will match our new aforementioned routes. This is because the webhook callback url is usually always the same and doesn't depend on what event triggered it e.g., `"myapp.com/webhook"`. You would think we could create a plug for this and simply add it to a custom pipeline for the aforementioned routes. The problem with this is the router will invoke the pipeline after it matches a route. Therefore we cannot modify the `conn`'s path in this pipeline and expect it to match our `add`, `subtract`, `multiply` or `divide` routes. If we want our new routes to match, we need to intercept the `conn` in a plug called in the endpoint. The endpoint handles starting the web server and transforming requests through several defined plugs before calling the Router. Let's add a plug called `MyApp.WebhookShunt` to the endpoint, just before the router.
 
 ```ruby
 defmodule MyApp.Endpoint do
@@ -97,7 +92,7 @@ The core components of a Phoenix appplication are plugs. This includes Endpoints
 
 Let's examine the code above, you'll notice there a two functions already defined:
 * `init/1` which initializes any arguments or options to be passed to `call/2`
-* `call/2` which transforms the connection. (It's actually a simple function plug.)
+* `call/2` which transforms the connection (it's actually a simple function plug).
 
 Both of these need to be implemented in a module plug. Let's modify `call/2` to match the `addition` event in the request payload and change the request path to the route we defined for addition:
 
@@ -135,9 +130,9 @@ I.e.,
 
 `conn` -> `Router` -> `WebhookShunt` -> `WebhookRouter` -> `WebhookController`
 
-I think this approach is better; we don't need to modify the endpoint, the router simply forwards anything that matches the webhook path to the shunt and the app's concerns are clearly seperated.
+I think this approach is better; we don't need to modify the endpoint, the router simply forwards anything that matches the webhook path to the shunt and the app's concerns are clearly separated.
 
-Let's setup our Webhook path in `router.ex`:
+Let's setup our webhook path in `router.ex`:
 
 ```ruby
 scope "/", MyApp do
@@ -192,4 +187,4 @@ def add(params), do: #handle addition event
 def subtract(params), do: #handle subtraction event
 ```
 
-So there you have it, shunting Webhooks in Phoenix.
+So there you have it, shunting webhooks in Phoenix.
