@@ -81,9 +81,9 @@ And let's create a file called `webhook_shunt.exs` and add it to our `plugs` fol
 defmodule MyAppWeb.Plug.WebhookShunt do
   alias Plug.Conn
 
-  def init(default), do: default
+  def init(opts), do: opts
 
-  def call(conn, default) do
+  def call(conn, opts) do
   end
 end
 ```
@@ -100,14 +100,14 @@ Both of these need to be implemented in a module plug. Let's modify `call/2` to 
 defmodule MyAppWeb.Plug.WebhookShunt do
   alias Plug.Conn
 
-  def init(default), do: default
+  def init(opts), do: opts
 
-  def call(%Conn{params: %{"event" => "addition"}} = conn, _default) do
+  def call(%Conn{params: %{"event" => "addition"}} = conn, _opts) do
     conn
     |> change_path_info(["webhook", "add"])
   end
 
-  def call(conn, _default), do: conn
+  def call(conn, _opts), do: conn
 
   def change_path_info(conn, new_path), do: put_in(conn.path_info, new_path)
 end
@@ -149,15 +149,15 @@ defmodule MyAppWeb.Plugs.WebhookShunt do
   alias Plug.Conn
   alias MyAppWeb.WebhookRouter
 
-  def init(default), do: default
+  def init(opts), do: opts
 
-  def call(%Conn{params: %{"event" => "addition"}} = conn, _default) do
+  def call(%Conn{params: %{"event" => "addition"}} = conn, _opts) do
     conn
     |> change_path_info(["webhook", "add"])
     |> WebhookRouter.call(opts)
   end
 
-  def call(%Conn{params: %{"event" => "subtraction"}} = conn, _default) do
+  def call(%Conn{params: %{"event" => "subtraction"}} = conn, _opts) do
     conn
     |> change_path_info(["webhook", "subtract"])
     |> WebhookRouter.call(opts)
