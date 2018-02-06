@@ -1,7 +1,7 @@
 ---
 layout: article
 section: Blog
-title: Shunting Webhooks in Phoenix
+title: Handling Webhooks in Phoenix
 author: "Niklas Long"
 github-handle: niklaslong
 ---
@@ -65,7 +65,11 @@ def multiply(params), do: #handle multiplication event
 def divide(params), do: #handle division
 ```
 
-In this case, each controller action performs a specific function, the router maps each incoming request to these actions and the code is easily maintainable, well-structured and won't become jumbled over time. To achieve this however, we need to change a couple of things. First off, we need to interfere with the incoming `conn` before it hits the router so it will match our new aforementioned routes. This is because the webhook callback url is usually always the same and doesn't depend on what event triggered it e.g., `"myapp.com/webhook"`. You would think we could create a plug for this and simply add it to a custom pipeline for the aforementioned routes. The problem with this is the router will invoke the pipeline after it matches a route. Therefore we cannot modify the `conn`'s path in this pipeline and expect it to match our `add`, `subtract`, `multiply` or `divide` routes. If we want our new routes to match, we need to intercept the `conn` in a plug called in the endpoint. The endpoint handles starting the web server and transforming requests through several defined plugs before calling the Router. Let's add a plug called `MyApp.WebhookShunt` to the endpoint, just before the router.
+In this case, each controller action performs a specific function, the router maps each incoming request to these actions and the code is easily maintainable, well-structured and won't become jumbled over time. To achieve this however, we need to change a couple of things.
+
+First off, we need to interfere with the incoming `conn` before it hits the router so it will match our new routes. This is because the webhook callback url is usually always the same and doesn't depend on what event triggered it e.g., `"myapp.com/webhook"`. You would think we could create a plug for this and simply add it to a custom pipeline for the routes. The problem with this, is the router will invoke the pipeline after it matches a route. Therefore, we cannot modify the `conn`'s path in this pipeline and expect it to match our `add`, `subtract`, `multiply` or `divide` routes. If we want our new routes to match, we need to intercept the `conn` in a plug called in the endpoint. The endpoint handles starting the web server and transforming requests through several defined plugs before calling the Router.
+
+Let's add a plug called `MyApp.WebhookShunt` to the endpoint, just before the router.
 
 ```ruby
 defmodule MyApp.Endpoint do
@@ -88,11 +92,11 @@ defmodule MyAppWeb.Plug.WebhookShunt do
 end
 ```
 
-The core components of a Phoenix appplication are plugs. This includes Endpoints, Routers and Controllers. There are two flavors of `Plug`, function plugs and module plugs. We'll be using the latter in this example, but I highly suggest checking out the docs here: add link to docs.
+The core components of a Phoenix appplication are plugs. This includes Endpoints, Routers and Controllers. There are two flavors of `Plug`, function plugs and module plugs. We'll be using the latter in this example, but I highly suggest checking out the [docs](https://hexdocs.pm/plug/readme.html).
 
 Let's examine the code above, you'll notice there a two functions already defined:
-* `init/1` which initializes any arguments or options to be passed to `call/2` (executed at compile time).
-* `call/2` which transforms the connection (it's actually a simple function plug and is executed at run time).
+* `init/1` which initializes any arguments or options to be passed to `call/2` (executed at compile time)
+* `call/2` which transforms the connection (it's actually a simple function plug and is executed at run time)
 
 Both of these need to be implemented in a module plug. Let's modify `call/2` to match the `addition` event in the request payload and change the request path to the route we defined for addition:
 
@@ -113,7 +117,7 @@ defmodule MyAppWeb.Plug.WebhookShunt do
 end
 ```
 
-`change_path_info/2` changes the `path_info` property on the `conn`, in this case to `post "webhook/add"`. You'll notice I also added a no-op function clause for `call/1`. If other routes are added and don't need to be maniupulated in the same way as the ones above, we need to make sure the request gets through to the router unmodified.
+`change_path_info/2` changes the `path_info` property on the `conn`, in this case to `post "webhook/add"`. You'll notice I also added a no-op function clause for `call/1`. If other routes are added and don't need to be manipulated in the same way as the ones above, we need to make sure the request gets through to the router unmodified.
 
 This solution isn't great however. We are placing code in the endpoint, which will be executed no matter what the request path is. This isn't ideal, and may cause issues down the line.
 
@@ -167,7 +171,7 @@ defmodule MyAppWeb.Plugs.WebhookShunt do
 end
 ```
 
-Let's also create `webhook_router.ex` in the _web directory:
+Let's also create `webhook_router.ex` in the `_web` directory:
 
 ```ruby
 defmodule MyAppWeb.WebhookRouter do
@@ -187,4 +191,4 @@ def add(params), do: #handle addition event
 def subtract(params), do: #handle subtraction event
 ```
 
-So there you have it, shunting webhooks in Phoenix.
+So there you have it, handling webhooks in Phoenix.
