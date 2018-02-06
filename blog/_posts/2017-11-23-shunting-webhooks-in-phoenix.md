@@ -91,8 +91,8 @@ end
 The core components of a Phoenix appplication are plugs. This includes Endpoints, Routers and Controllers. There are two flavors of `Plug`, function plugs and module plugs. We'll be using the latter in this example, but I highly suggest checking out the docs here: add link to docs.
 
 Let's examine the code above, you'll notice there a two functions already defined:
-* `init/1` which initializes any arguments or options to be passed to `call/2`
-* `call/2` which transforms the connection (it's actually a simple function plug).
+* `init/1` which initializes any arguments or options to be passed to `call/2` (executed at compile time).
+* `call/2` which transforms the connection (it's actually a simple function plug and is executed at run time).
 
 Both of these need to be implemented in a module plug. Let's modify `call/2` to match the `addition` event in the request payload and change the request path to the route we defined for addition:
 
